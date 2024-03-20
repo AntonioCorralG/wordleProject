@@ -1,0 +1,455 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+    <style>
+      body {
+        background-color: powderblue;
+        font-family: "Franklin Gothic Medium", "Arial Narrow", Arial, sans-serif;
+      }
+
+      h1 {
+        text-align: center;
+      }
+
+      #gameContainer {
+        display: flex;
+        align-items: center;
+        flex-direction: column;
+        background-color: antiquewhite;
+        padding: 1rem;
+      }
+
+      .letterBox {
+        border: 0.1rem solid black;
+        border-radius: 0.25rem;
+        margin: 0.5rem 0.25rem;
+        font-size: 2.5rem;
+        font-weight: 700;
+        height: 3rem;
+        width: 3rem;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        text-transform: uppercase;
+      }
+
+      .filledBox {
+        border: 2px solid black;
+      }
+
+      .letterRow {
+        display: flex;
+      }
+
+      .keyboard-key {
+        border: 2px solid black;
+        color: black;
+        padding: 0.5rem;
+        margin: 0.25rem;
+        text-align: center;
+        cursor: pointer;
+        user-select: none;
+        display: inline-block;
+      }
+
+      .keyboard-key:hover {
+        background: lightgray;
+      }
+
+      #keyboardContainer {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        max-width: 600px;
+        margin: 1rem;
+      }
+
+      #gameControllerContainer {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: center;
+        max-width: 600px;
+        margin: 1rem;
+      }
+
+      #gameControllerContainer button {
+        margin: 1rem;
+        font-size: 1rem;
+        background-color: bisque;
+        border-radius: 50%;
+        padding: 2rem;
+        font-weight: bold;
+      }
+
+      #gameControllerContainer button:hover {
+        background-color: aliceblue;
+      }
+      @media (max-width: 700px) {
+        .game-container {
+          width: 90%;
+          margin: auto;
+        }
+      }
+    </style>
+    <title>Wordle Game</title>
+  </head>
+  <body>
+    <h1>Wordle Game</h1>
+    <div id="container">
+      <div id="gameContainer"></div>
+      <div id="keyboardContainer"></div>
+      <div id="gameControllerContainer">
+        <button id="backspaceBtn">Backspace</button>
+        <button id="enterBtn">Enter</button>
+        <button id="restartBtn">Restart</button>
+        <button id="debug-btn">Toggle Debug Mode</button>
+        <div id="debugAnswer"></div>
+      </div>
+    </div>
+
+    <script>
+      let debugMode = false;
+      const numberOfGuesses = 6;
+      let numberOfRemainingGuesses = numberOfGuesses;
+      let nextLetter = 0;
+      let currentGuess = [];
+      let wordsArrayList = [
+        "ABOUT",
+        "AGAIN",
+        "BASIC",
+        "BEANS",
+        "BREAK",
+        "CAUSE",
+        "CLEAN",
+        "CLOUD",
+        "COMES",
+        "COULD",
+        "DREAM",
+        "ENJOY",
+        "EQUAL",
+        "FAITH",
+        "FIGHT",
+        "FINAL",
+        "FIRST",
+        "FORCE",
+        "FOUND",
+        "FRESH",
+        "FUNNY",
+        "GRANT",
+        "GREEN",
+        "GUESS",
+        "HAPPY",
+        "HEARD",
+        "HORSE",
+        "HUMAN",
+        "HYPER",
+        "IDEAS",
+        "IMAGE",
+        "ISSUE",
+        "LAUGH",
+        "LEARN",
+        "LUNCH",
+        "MAGIC",
+        "MAYBE",
+        "MERRY",
+        "NEVER",
+        "NIGHT",
+        "NOISE",
+        "OFFER",
+        "OFTEN",
+        "OPEN",
+        "ORDER",
+        "OTHER",
+        "OUGHT",
+        "PLACE",
+        "PLANT",
+        "PLAIN",
+        "POWER",
+        "PROVE",
+        "READY",
+        "RIGHT",
+        "SOUND",
+        "SPACE",
+        "SPEAK",
+        "SPICY",
+        "SPORT",
+        "STUDY",
+        "SWEET",
+        "TACOS",
+        "THANK",
+        "THINK",
+      ];
+
+      let correctWordleString =
+        wordsArrayList[Math.floor(Math.random() * wordsArrayList.length)];
+      console.log("correctWordleString", correctWordleString);
+
+      const alphabet = [
+        "A",
+        "B",
+        "C",
+        "D",
+        "E",
+        "F",
+        "G",
+        "H",
+        "I",
+        "J",
+        "K",
+        "L",
+        "M",
+        "N",
+        "O",
+        "P",
+        "Q",
+        "R",
+        "S",
+        "T",
+        "U",
+        "V",
+        "W",
+        "X",
+        "Y",
+        "Z",
+      ];
+
+      const toggleDebugMode = () => {
+        debugMode = !debugMode;
+
+        if (debugMode) {
+          document.getElementById(
+            "debugAnswer"
+          ).innerHTML = `Answer: ${correctWordleString}`;
+        } else {
+          document.getElementById("debugAnswer").innerHTML = "";
+        }
+      };
+
+      document
+        .getElementById("debug-btn")
+        .addEventListener("click", toggleDebugMode);
+
+      let board = document.getElementById("gameContainer");
+
+      for (let i = 0; i < numberOfGuesses; i++) {
+        let row = document.createElement("div");
+        row.className = "letterRow";
+
+        for (let j = 0; j < 5; j++) {
+          let box = document.createElement("div");
+          box.className = "letterBox";
+          row.appendChild(box);
+        }
+
+        board.appendChild(row);
+      }
+
+      for (let i = 0; i < alphabet.length; i++) {
+        let newDiv = document.createElement("div");
+        newDiv.id = "KEY_" + alphabet[i];
+        newDiv.classList.add("keyboard-key");
+        newDiv.textContent = alphabet[i];
+        document.getElementById("keyboardContainer").appendChild(newDiv);
+      }
+
+      document
+
+        .getElementById("keyboardContainer")
+
+        .addEventListener("click", (clickEvent) => {
+          if (numberOfRemainingGuesses === 0) {
+            return;
+          }
+
+          let keyPressed = clickEvent.target.textContent;
+
+          if (!clickEvent.target.matches(".keyboard-key")) {
+            return;
+          }
+
+          if (keyPressed === "Backspace" && nextLetter !== 0) {
+            backspaceFunc();
+
+            return;
+          }
+
+          if (keyPressed === "Enter") {
+            checkUserGuess();
+
+            return;
+          }
+
+          let found = keyPressed.match(/[a-z]/gi);
+
+          if (!found) {
+            return;
+          } else {
+            insertLetter(keyPressed);
+          }
+        });
+
+      const insertLetter = (clickKeyEvent) => {
+        if (nextLetter === 5) {
+          return;
+        }
+
+        let clickedKey = clickKeyEvent.toUpperCase();
+
+        let row =
+          document.getElementsByClassName("letterRow")[
+            numberOfGuesses - numberOfRemainingGuesses
+          ];
+
+        let box = row.children[nextLetter];
+        box.textContent = clickedKey;
+        box.classList.add("filledBox");
+        currentGuess.push(clickedKey);
+        nextLetter += 1;
+      };
+
+      const backspaceFunc = () => {
+        let row =
+          document.getElementsByClassName("letterRow")[
+            numberOfGuesses - numberOfRemainingGuesses
+          ];
+
+        let box = row.children[nextLetter - 1];
+        box.textContent = "";
+        box.classList.remove("filled-box");
+        currentGuess.pop();
+        nextLetter -= 1;
+      };
+
+      const checkWordValidity = async (word) => {
+        const apiKey = `e846d9f5-6f6b-437f-997c-8454d0718e7d`;
+        const url = `https://dictionaryapi.com/api/v3/references/collegiate/json/${word}?key=${apiKey}`;
+        const response = await fetch(url);
+        const data = await response.json();
+        return data;
+      };
+
+      const checkUserGuess = async () => {
+        let row =
+          document.getElementsByClassName("letterRow")[
+            numberOfGuesses - numberOfRemainingGuesses
+          ];
+
+        let userGuessString = currentGuess.join("");
+        let rightGuessArray = Array.from(correctWordleString);
+
+        if (userGuessString.length != 5) {
+          alert("Your entered word is not long enough. Try again.");
+
+          return;
+        }
+
+        const data = await checkWordValidity(userGuessString.toLowerCase());
+
+        if (
+          !Array.isArray(data) ||
+          !data.length ||
+          typeof data[0] === "string"
+        ) {
+          alert("Entered word does not exist. Try another");
+
+          return;
+        }
+
+        for (let i = 0; i < 5; i++) {
+          let boxColor = "";
+          let box = row.children[i];
+          let letter = currentGuess[i];
+          let letterPosition = rightGuessArray.indexOf(currentGuess[i]);
+
+          if (currentGuess[i] === rightGuessArray[i]) {
+            boxColor = "lightgreen";
+          } else if (letterPosition !== -1) {
+            rightGuessArray[letterPosition] = "#";
+
+            boxColor = "yellow";
+          } else {
+            boxColor = "lightgrey";
+          }
+          box.style.backgroundColor = boxColor;
+          shadeKeyboard(letter, boxColor);
+        }
+
+        if (userGuessString === correctWordleString) {
+          alert("You guessed right! Game over!");
+          numberOfRemainingGuesses = 0;
+          return;
+        }
+
+        nextLetter = 0;
+        currentGuess = [];
+        numberOfRemainingGuesses -= 1;
+      };
+
+      const shadeKeyboard = (letter, color) => {
+        for (const elem of document.getElementsByClassName("keyboard-key")) {
+          if (elem.textContent === letter) {
+            let oldColor = elem.style.backgroundColor;
+
+            if (oldColor === "lightgreen") {
+              return;
+            }
+
+            if (oldColor === "yellow" && color !== "lightgreen") {
+              return;
+            }
+
+            elem.style.backgroundColor = color;
+
+            break;
+          }
+        }
+      };
+
+      const restartGame = () => {
+        numberOfRemainingGuesses = numberOfGuesses;
+        currentGuess = [];
+        nextLetter = 0;
+
+        correctWordleString =
+          wordsArrayList[Math.floor(Math.random() * wordsArrayList.length)];
+        const rows = document.getElementsByClassName("letterRow");
+
+        for (let i = 0; i < rows.length; i++) {
+          const row = rows[i];
+
+          for (let j = 0; j < row.children.length; j++) {
+            row.children[j].style.backgroundColor = "bisque";
+
+            row.children[j].textContent = "";
+          }
+        }
+
+        const keys = document.getElementsByClassName("keyboard-key");
+        for (let i = 0; i < keys.length; i++) {
+          keys[i].style.backgroundColor = "transparent";
+        }
+      };
+
+      document
+        .getElementById("restartBtn")
+        .addEventListener("click", restartGame);
+
+      document
+        .getElementById("backspaceBtn")
+        .addEventListener("click", function () {
+          backspaceFunc();
+        });
+
+      document
+        .getElementById("enterBtn")
+        .addEventListener("click", function () {
+          checkUserGuess();
+        });
+    </script>
+  </body>
+</html>
